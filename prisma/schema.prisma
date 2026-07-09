@@ -1,0 +1,98 @@
+// Tier Forge — Tier list system with Twitch integration
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model TierList {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  slug        String    @unique
+  accent      String    @default("#d4a853")
+  isLive      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  rows        TierRow[]
+  items       TierItem[]
+}
+
+model TierRow {
+  id         String     @id @default(cuid())
+  tierListId String
+  label      String
+  color      String
+  order      Int
+  tierList   TierList   @relation(fields: [tierListId], references: [id], onDelete: Cascade)
+  items      TierItem[]
+
+  @@index([tierListId])
+}
+
+model TierItem {
+  id          String    @id @default(cuid())
+  tierListId  String
+  rowId       String?
+  name        String
+  imageUrl    String?
+  addedBy     String    @default("streamer")
+  voteCount   Int       @default(0)
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  tierList    TierList  @relation(fields: [tierListId], references: [id], onDelete: Cascade)
+  row         TierRow?  @relation(fields: [rowId], references: [id], onDelete: SetNull)
+
+  @@index([tierListId])
+  @@index([rowId])
+}
+
+model TwitchConfig {
+  id                   String   @id @default("singleton")
+  channelName          String?
+  botNickname          String?  @default("tierforge_bot")
+  oauthToken           String?  // oauth:xxxxxxxx
+  isListening          Boolean  @default(false)
+  commandPrefix        String   @default("!")
+  allowViewersToAdd    Boolean  @default(true)
+  allowViewersToMove   Boolean  @default(false)
+  allowViewersToVote   Boolean  @default(true)
+  autoStartOnBoot      Boolean  @default(false)
+  lastConnectedAt      DateTime?
+  lastError            String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model ChatLog {
+  id         String   @id @default(cuid())
+  username   String
+  message    String
+  command    String?
+  tierListId String?
+  isCommand  Boolean  @default(false)
+  isActioned Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([tierListId])
+}
+
+model VoteRecord {
+  id        String   @id @default(cuid())
+  username  String
+  itemId    String
+  tierListId String
+  createdAt DateTime @default(now())
+
+  @@unique([username, itemId])
+  @@index([itemId])
+  @@index([tierListId])
+}
